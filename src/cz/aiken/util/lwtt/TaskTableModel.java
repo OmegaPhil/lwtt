@@ -36,15 +36,15 @@ import java.text.*;
  * @author luk
  */
 public class TaskTableModel extends AbstractTableModel implements ActionListener {
-    
+
     private ArrayList<Task> tasks = new ArrayList<Task>();
     private javax.swing.Timer timer = new javax.swing.Timer(300000, this);
-    
+
     private MessageFormat timeFormat = new MessageFormat("{0,number}:{1,number,00}");
     private MessageFormat priceFormat = new MessageFormat("{0,number}.{1,number,00}");
-    
+
     private TaskFrame taskFrame = null;
-    
+
     /**
      * Creates a new instance of TaskTableModel
      * @param tf task frame instance
@@ -152,11 +152,11 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
     public boolean isCellEditable(int rowIndex, int columnIndex) {
         return columnIndex == 0;
     }
-    
+
     public Task getTask(int index) {
         return tasks.get(index);
     }
-    
+
     /**
      * Creates a new task.
      */
@@ -164,54 +164,55 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         Task t = new Task();
         t.setActionListener(this);
         tasks.add(t);
-        
+
         int row = tasks.size()-1;
+       
         fireTableRowsInserted(row, row);
     }
-    
+
     /**
      * Removes the given tasks.
-     * @param start start index
-     * @param end end index (including)
+     * @param tasksToRemove indices of rows referencing tasks to remove
      */
-    public void removeTasks(int start, int end) {
-        for (int i=end; i>=start; i--) {
-            Task t = tasks.remove(i);
+    public void removeTasks(int[] tasksToRemove) {
+
+        /* Due to sorting now used, the given tasks may no longer be contiguous
+         * in the model
+         */
+        for (int i=0; i<tasksToRemove.length; ++i) {
+            Task t = tasks.remove(tasksToRemove[i]);
             t.stop();
             t.setActionListener(null);
+            fireTableRowsDeleted(tasksToRemove[i], tasksToRemove[i]);
         }
-        
-        fireTableRowsDeleted(start, end);
     }
-    
+
     /**
      * Starts the given tasks.
-     * @param start start index
-     * @param end end index (including)
+     * @param tasksToStart indices of tasks to start
      */
-    public void startTasks(int start, int end) {
-        for (int i=start; i<=end; i++) {
-            Task t = tasks.get(i);
+    public void startTasks(int[] tasksToStart) {
+        for (int i=0; i<tasksToStart.length; ++i) {
+            Task t = tasks.get(tasksToStart[i]);
             t.start();
-            fireTableCellUpdated(i, 1);
-            fireTableCellUpdated(i, 2);
-        }        
-    }
-    
-    /**
-     * Stops the given tasks.
-     * @param start start index
-     * @param end end index (including)
-     */
-    public void stopTasks(int start, int end) {
-        for (int i=start; i<=end; i++) {
-            Task t = tasks.get(i);
-            t.stop();
-            fireTableCellUpdated(i, 1);
-            fireTableCellUpdated(i, 2);
+            fireTableCellUpdated(tasksToStart[i], 1);
+            fireTableCellUpdated(tasksToStart[i], 2);
         }
     }
-    
+
+    /**
+     * Stops the given tasks.
+     * @param tasksToStop indices of tasks to stop
+     */
+    public void stopTasks(int[] tasksToStop) {
+        for (int i=0; i<tasksToStop.length; ++i) {
+            Task t = tasks.get(tasksToStop[i]);
+            t.stop();
+            fireTableCellUpdated(tasksToStop[i], 1);
+            fireTableCellUpdated(tasksToStop[i], 2);
+        }
+    }
+
     /**
      * Stops all tasks.
      */
@@ -220,31 +221,30 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         while (it.hasNext()) {
             it.next().stop();
         }
-        
+
         fireTableDataChanged();
     }
-    
+
     /**
      * Resets the given tasks.
-     * @param start index of the first resetted task
-     * @param end index of the first NOT resetted task (the first task beyond the interval)
+     * @param tasksToReset indices of tasks to reset
      */
-    public void resetTasks(int start, int end) {
-        for (int i=start; i<=end; i++) {
-            Task t = tasks.get(i);
+    public void resetTasks(int[] tasksToReset) {
+        for (int i=0; i<tasksToReset.length; ++i) {
+            Task t = tasks.get(tasksToReset[i]);
             t.setConsumption(0);
-            fireTableCellUpdated(i, 1);
-            fireTableCellUpdated(i, 2);
+            fireTableCellUpdated(tasksToReset[i], 1);
+            fireTableCellUpdated(tasksToReset[i], 2);
         }
     }
-    
+
     /**
      * Destroys the timer controlling automatic data saving.
      */
     public void cancelAutoSave() {
         timer.stop();
     }
-    
+
     /**
      * Returns the absolute path to the directory where LWTT data should be
      * saved.
@@ -254,7 +254,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         Properties sys = System.getProperties();
         return new File(sys.getProperty("user.home"), ".lwtt");
     }
-    
+
     /**
      * Returns the absolute path to the file where LWTT data should be
      * saved.
@@ -263,7 +263,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
     public static File getPath() {
         return new File(getDir(), "data.xml");
     }
-    
+
     /**
      * Checks whether the given task is running.
      * @param index task index
@@ -273,28 +273,28 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
     public boolean isRunning(int index) {
         return tasks.get(index).isRunning();
     }
-    
+
     /**
      * Loads application's data from the file.
      */
     public synchronized void loadFromFile() {
         tasks.clear();
-        
+
         File file = getPath();
         if (!file.exists()) {
             Properties props = new Properties();
             taskFrame.setStartSettings(props);
             return;
         }
-        
+
         try {
             FileInputStream is = new FileInputStream(file);
             Properties props = new Properties();
             props.loadFromXML(is);
             is.close();
-            
+
             taskFrame.setStartSettings(props);
-            
+
             Iterator<Object> it = props.keySet().iterator();
             while (it.hasNext()) {
                 String key = (String) it.next();
@@ -312,19 +312,20 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
                         tasks.add(t);
                     } catch (NumberFormatException e) {
                         JOptionPane.showMessageDialog(null, "Cannot load data from file (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
-                    }                    
+                    }
                 }
             }
-            
+
+            // TODO: Why doesn't this have an effect normally?
             Collections.sort(tasks);
-            
+
             fireTableDataChanged();
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Saves application's data to the file.
      */
@@ -336,7 +337,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
                 return;
             }
         }
-        
+
         Properties props = new Properties();
         props.setProperty("window.location.x", Integer.toString(taskFrame.getX()));
         props.setProperty("window.location.y", Integer.toString(taskFrame.getY()));
@@ -349,7 +350,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
             props.setProperty(id + ".consumption", Long.toString(t.getConsumption()));
             props.setProperty(id + ".price", Double.toString(t.getPrice()));
         }
-        
+
         try {
             FileOutputStream os = new FileOutputStream(getPath());
             props.storeToXML(os, "LWTT task data");
@@ -361,7 +362,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
 
     /**
      * Processes an action event.
-     * 
+     *
      * If the event has been generated by the auto-save timer it saves
      * the data. Otherwise (a button action occurred) it updates
      * the appropriate table cell.
@@ -373,10 +374,12 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
             saveToFile();
         }
         else {
+
+            // WIP: Find out if this triggers on button actions - how to get at the jTable1 to map this properly?
+            //jTable1.convertRowIndexToModel(
             int row = tasks.indexOf(src);
             fireTableCellUpdated(row, 1);
             fireTableCellUpdated(row, 2);
         }
     }
-    
 }

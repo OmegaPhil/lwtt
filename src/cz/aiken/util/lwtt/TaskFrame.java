@@ -34,16 +34,16 @@ import javax.swing.event.*;
  * @author luk
  */
 public class TaskFrame extends JFrame implements ListSelectionListener {
-    
+
     private TaskTableModel model = null;
-    
+
     private Properties startSettings = null;
-    
+
     /**
      * Time consumption column width
      */
     public static final int CONS_COL_WIDTH = 180;
-    
+
     /**
      * Creates new form TaskFrame
      */
@@ -55,7 +55,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
         tc.setPreferredWidth(CONS_COL_WIDTH);
         jTable1.getSelectionModel().addListSelectionListener(this);
         updateButtons();
-        
+
         try {
             String xs = startSettings.getProperty("window.location.x");
             String ys = startSettings.getProperty("window.location.y");
@@ -65,7 +65,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(null, "Cannot load window location (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
+
         try {
             String ws = startSettings.getProperty("window.size.w");
             String hs = startSettings.getProperty("window.size.h");
@@ -76,8 +76,8 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
             JOptionPane.showMessageDialog(null, "Cannot load window size (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    
+
+
     /**
      * Sets initial (start) settings.
      * @param props properties with initial settings
@@ -85,36 +85,46 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     public void setStartSettings(Properties props) {
         startSettings = props;
     }
-    
+
     /**
      * Updates the buttons' state.
      */
     private void updateButtons() {
-        int cnt = jTable1.getSelectedRowCount();
-        if (cnt == 0) {
+        int[] selectedRows = jTable1.getSelectedRows();
+        if (selectedRows.length == 0) {
             startButton.setEnabled(false);
             stopButton.setEnabled(false);
             removeButton.setEnabled(false);
             resetButton.setEnabled(false);
         }
         else {
-            int start = jTable1.getSelectedRow();
-            int end = start + cnt - 1;
             removeButton.setEnabled(true);
             resetButton.setEnabled(true);
-            
+
             int rcnt = 0;
-            for (int i=start; i<=end; i++) {
-                if (model.isRunning(i))
+            for (int i=0; i<selectedRows.length; i++) {
+                if (model.isRunning(selectedRows[i]))
                     rcnt++;
             }
-            startButton.setEnabled(rcnt < cnt);
+            startButton.setEnabled(rcnt < selectedRows.length);
             stopButton.setEnabled(rcnt > 0);
         }
-        
-        propsButton.setEnabled(cnt == 1);
+
+        propsButton.setEnabled(selectedRows.length == 1);
     }
-    
+
+    /**
+     * Converts an array of view row indices to the underlying model row
+     * indices
+     * @param rows row indices to convert
+    */
+    private int[] convertRowIndiciesToModel(int[] rows) {
+        for (int i=0; i<rows.length; ++i) {
+            rows[i] = jTable1.convertRowIndexToModel(rows[i]);
+        }
+        return rows;
+    }
+
     /**
      * Updates the buttons according the current selection.
      * @param e list selection event
@@ -122,7 +132,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     public void valueChanged(ListSelectionEvent e) {
         updateButtons();
     }
-    
+
     /** This method is called from within the constructor to
      * initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is
@@ -217,11 +227,11 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-            .add(startButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
-            .add(stopButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
-            .add(addButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
-            .add(removeButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
-            .add(resetButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
+            .add(startButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .add(stopButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .add(addButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .add(removeButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .add(resetButton, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .add(propsButton)
         );
 
@@ -232,6 +242,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
 
         jTable1.setModel(model);
         jTable1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        jTable1.setAutoCreateRowSorter(true);
         jTable1.setDefaultRenderer(StringBuffer.class, new DefaultTableCellRenderer() {
             private Color fg = Color.RED;
             private Color bg = new Color(255, 240, 240);
@@ -242,6 +253,9 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
                 if (JLabel.class.isAssignableFrom(c.getClass())) {
                     ((JLabel) c).setHorizontalAlignment(JLabel.TRAILING);
                 }
+
+                // Debug code
+                System.out.println("row: " + row + "\ntext: " + table.getValueAt(row, 0) + "\nmodel.isRunning: " + model.isRunning(row));
 
                 if (model.isRunning(row)) {
                     c.setForeground(fg);
@@ -276,10 +290,12 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }// </editor-fold>//GEN-END:initComponents
 
     private void resetPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetPressed
-        int start = jTable1.getSelectedRow();
-        int cnt = jTable1.getSelectedRowCount();
-        if (cnt > 0)
-            model.resetTasks(start, start + cnt - 1);
+
+        /* Automatic sorting is now used - model 'coordinates' don't necessarily
+         * match view 'coordinates' - so can't rely on contiguous rows either */
+        int[] tasksToReset = jTable1.getSelectedRows();
+        if (tasksToReset.length > 0)
+            model.resetTasks(tasksToReset);
     }//GEN-LAST:event_resetPressed
 
     private void windowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_windowClosing
@@ -288,11 +304,9 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }//GEN-LAST:event_windowClosing
 
     private void removePressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removePressed
-        int start = jTable1.getSelectedRow();
-        int cnt = jTable1.getSelectedRowCount();
-        if (cnt > 0)
-            model.removeTasks(start, start + cnt - 1);
-            
+        int[] tasksToRemove = jTable1.getSelectedRows();
+        if (tasksToRemove.length > 0)
+            model.removeTasks(tasksToRemove);
     }//GEN-LAST:event_removePressed
 
     private void addPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addPressed
@@ -300,19 +314,17 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }//GEN-LAST:event_addPressed
 
     private void stopPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopPressed
-        int start = jTable1.getSelectedRow();
-        int cnt = jTable1.getSelectedRowCount();
-        if (cnt > 0) {
-            model.stopTasks(start, start + cnt - 1);
+        int[] tasksToStop = jTable1.getSelectedRows();
+        if (tasksToStop.length > 0) {
+            model.stopTasks(tasksToStop);
             updateButtons();
         }
     }//GEN-LAST:event_stopPressed
 
     private void startPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startPressed
-        int start = jTable1.getSelectedRow();
-        int cnt = jTable1.getSelectedRowCount();
-        if (cnt > 0) {
-            model.startTasks(start, start + cnt - 1);
+        int[] tasksToStart = jTable1.getSelectedRows();
+        if (tasksToStart.length > 0) {
+            model.startTasks(tasksToStart);
             updateButtons();
         }
     }//GEN-LAST:event_startPressed
@@ -331,7 +343,7 @@ private void propsPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_pro
         }
     }
 }//GEN-LAST:event_propsPressed
-          
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addButton;
     private javax.swing.JPanel jPanel1;
@@ -344,5 +356,5 @@ private void propsPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_pro
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;
     // End of variables declaration//GEN-END:variables
-    
+
 }
