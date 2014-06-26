@@ -336,7 +336,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
                 // Debug code
                 //System.out.println("row: " + row + ", row text: " + table.getValueAt(row, 0) + "\nrow to model: " + table.convertRowIndexToModel(row) + ", running: " + model.isRunning(table.convertRowIndexToModel(row)) + "\nrow to view: " + table.convertRowIndexToView(row) + ", running: " + model.isRunning(table.convertRowIndexToView(row)) +"\nisSelected: " + isSelected);
 
-                // It appears the row index given is without sorting!
+                // Convert sorted view index to model index
                 if (model.isRunning(table.convertRowIndexToModel(row))) {
                     c.setForeground(fg);
                     if (!isSelected)
