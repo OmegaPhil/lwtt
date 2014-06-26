@@ -183,6 +183,9 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
             Task t = tasks.remove(tasksToRemove[i]);
             t.stop();
             t.setActionListener(null);
+
+            /* Note that this looks like its acting on the view but takes model
+             * indices?? */
             fireTableRowsDeleted(tasksToRemove[i], tasksToRemove[i]);
         }
     }
@@ -195,6 +198,9 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         for (int i=0; i<tasksToStart.length; ++i) {
             Task t = tasks.get(tasksToStart[i]);
             t.start();
+
+            /* Note that this looks like its acting on the view but takes model
+             * indices?? */
             fireTableCellUpdated(tasksToStart[i], 1);
             fireTableCellUpdated(tasksToStart[i], 2);
         }
@@ -208,6 +214,9 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         for (int i=0; i<tasksToStop.length; ++i) {
             Task t = tasks.get(tasksToStop[i]);
             t.stop();
+
+            /* Note that this looks like its acting on the view but takes model
+             * indices?? */
             fireTableCellUpdated(tasksToStop[i], 1);
             fireTableCellUpdated(tasksToStop[i], 2);
         }
@@ -233,6 +242,9 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         for (int i=0; i<tasksToReset.length; ++i) {
             Task t = tasks.get(tasksToReset[i]);
             t.setConsumption(0);
+
+            /* Note that this looks like its acting on the view but takes model
+             * indices?? */
             fireTableCellUpdated(tasksToReset[i], 1);
             fireTableCellUpdated(tasksToReset[i], 2);
         }
@@ -375,11 +387,12 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         }
         else {
 
-            // WIP: Find out if this triggers on button actions - how to get at the jTable1 to map this properly?
-            //jTable1.convertRowIndexToModel(
-            int row = tasks.indexOf(src);
-            fireTableCellUpdated(row, 1);
-            fireTableCellUpdated(row, 2);
+            // Converting the task index to the current sorted view index
+            int[] rows = new int[1];
+            rows[0] = tasks.indexOf(src);
+            rows = taskFrame.convertRowIndicesToView(rows);
+            fireTableCellUpdated(rows[0], 1);
+            fireTableCellUpdated(rows[0], 2);
         }
     }
 }

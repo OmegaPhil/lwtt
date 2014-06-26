@@ -90,7 +90,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
      * Updates the buttons' state.
      */
     private void updateButtons() {
-        int[] selectedRows = jTable1.getSelectedRows();
+        int[] selectedRows = convertRowIndicesToModel(jTable1.getSelectedRows());
         if (selectedRows.length == 0) {
             startButton.setEnabled(false);
             stopButton.setEnabled(false);
@@ -117,10 +117,24 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
      * Converts an array of view row indices to the underlying model row
      * indices
      * @param rows row indices to convert
+     * @return model indices
     */
-    private int[] convertRowIndiciesToModel(int[] rows) {
+    private int[] convertRowIndicesToModel(int[] rows) {
         for (int i=0; i<rows.length; ++i) {
             rows[i] = jTable1.convertRowIndexToModel(rows[i]);
+        }
+        return rows;
+    }
+
+    /**
+     * Converts an array of model row indices to the sorted view row indices.
+     * Public as TaskTableModel.actionPerformed needs to call this
+     * @param rows row indices to convert
+     * @return view indices
+    */
+    public int[] convertRowIndicesToView(int[] rows) {
+        for (int i=0; i<rows.length; ++i) {
+            rows[i] = jTable1.convertRowIndexToView(rows[i]);
         }
         return rows;
     }
@@ -255,9 +269,10 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
                 }
 
                 // Debug code
-                System.out.println("row: " + row + "\ntext: " + table.getValueAt(row, 0) + "\nmodel.isRunning: " + model.isRunning(row));
+                //System.out.println("row: " + row + ", row text: " + table.getValueAt(row, 0) + "\nrow to model: " + table.convertRowIndexToModel(row) + ", running: " + model.isRunning(table.convertRowIndexToModel(row)) + "\nrow to view: " + table.convertRowIndexToView(row) + ", running: " + model.isRunning(table.convertRowIndexToView(row)) +"\nisSelected: " + isSelected);
 
-                if (model.isRunning(row)) {
+                // It appears the row index given is without sorting!
+                if (model.isRunning(table.convertRowIndexToModel(row))) {
                     c.setForeground(fg);
                     if (!isSelected)
                     c.setBackground(bg);
@@ -293,7 +308,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
 
         /* Automatic sorting is now used - model 'coordinates' don't necessarily
          * match view 'coordinates' - so can't rely on contiguous rows either */
-        int[] tasksToReset = jTable1.getSelectedRows();
+        int[] tasksToReset = convertRowIndicesToModel(jTable1.getSelectedRows());
         if (tasksToReset.length > 0)
             model.resetTasks(tasksToReset);
     }//GEN-LAST:event_resetPressed
@@ -304,7 +319,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }//GEN-LAST:event_windowClosing
 
     private void removePressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removePressed
-        int[] tasksToRemove = jTable1.getSelectedRows();
+        int[] tasksToRemove = convertRowIndicesToModel(jTable1.getSelectedRows());
         if (tasksToRemove.length > 0)
             model.removeTasks(tasksToRemove);
     }//GEN-LAST:event_removePressed
@@ -314,7 +329,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }//GEN-LAST:event_addPressed
 
     private void stopPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopPressed
-        int[] tasksToStop = jTable1.getSelectedRows();
+        int[] tasksToStop = convertRowIndicesToModel(jTable1.getSelectedRows());
         if (tasksToStop.length > 0) {
             model.stopTasks(tasksToStop);
             updateButtons();
@@ -322,7 +337,7 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
     }//GEN-LAST:event_stopPressed
 
     private void startPressed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startPressed
-        int[] tasksToStart = jTable1.getSelectedRows();
+        int[] tasksToStart = convertRowIndicesToModel(jTable1.getSelectedRows());
         if (tasksToStart.length > 0) {
             model.startTasks(tasksToStart);
             updateButtons();
