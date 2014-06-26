@@ -355,6 +355,11 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         props.setProperty("window.location.y", Integer.toString(taskFrame.getY()));
         props.setProperty("window.size.w", Integer.toString(taskFrame.getWidth()));
         props.setProperty("window.size.h", Integer.toString(taskFrame.getHeight()));
+
+        // Saving table sort details
+        props.setProperty("sortColumn", Integer.toString(taskFrame.getSortedColumn()));
+        props.setProperty("sortOrder", taskFrame.getSortOrder().toString());
+
         for (int i=0; i<tasks.size(); i++) {
             Task t = tasks.get(i);
             String id = Integer.toString(t.getId());

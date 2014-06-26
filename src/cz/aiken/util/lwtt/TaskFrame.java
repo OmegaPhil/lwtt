@@ -26,8 +26,9 @@ package cz.aiken.util.lwtt;
 import java.util.*;
 import java.awt.*;
 import javax.swing.*;
-import javax.swing.table.*;
 import javax.swing.event.*;
+import javax.swing.RowSorter.*;
+import javax.swing.table.*;
 
 /**
  * This class represents the main application frame.
@@ -74,6 +75,25 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
             }
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(null, "Cannot load window size (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+        try {
+
+            // Loading and applying table sort column and order
+            String sortColumn = startSettings.getProperty("sortColumn");
+            String orderString = startSettings.getProperty("sortOrder");
+            SortOrder order;
+            if (orderString == null)
+                order = SortOrder.UNSORTED;
+            else
+                order = SortOrder.valueOf(startSettings.getProperty("sortOrder"));
+            if (sortColumn != null) {
+                setSortDetails(Integer.parseInt(sortColumn), order);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Cannot set table sort column (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Cannot set table sort order (bad format).", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -137,6 +157,51 @@ public class TaskFrame extends JFrame implements ListSelectionListener {
             rows[i] = jTable1.convertRowIndexToView(rows[i]);
         }
         return rows;
+    }
+
+    /**
+     * Returns column table is sorted by, for saving settings
+     * @return sort column index
+    */
+    public int getSortedColumn() {
+        java.util.List<? extends SortKey> sortKeys = jTable1.
+                                                    getRowSorter().getSortKeys();
+        if (sortKeys.isEmpty())
+            return -1;
+        else
+            return sortKeys.get(0).getColumn();
+    }
+
+    /**
+     * Returns sort order of the sorted table column, for saving settings
+     * @return SortOrder
+    */
+    public SortOrder getSortOrder() {
+        java.util.List<? extends SortKey> sortKeys = jTable1.
+                                                    getRowSorter().getSortKeys();
+        if (sortKeys.isEmpty())
+            return SortOrder.UNSORTED;
+        else
+            return sortKeys.get(0).getSortOrder();
+    }
+
+    /**
+     * Sets the column and order to sort the table by, used during settings loading
+     * @param column Column index to sort on
+     * @param order SortOrder to apply to column
+    */
+    private void setSortDetails(int column, SortOrder order) {
+        TableRowSorter rowSorter = (TableRowSorter)jTable1.getRowSorter();
+        if (column == -1)
+
+            // Official way to clear any sort
+            rowSorter.setSortKeys(null);
+        else {
+            java.util.List<SortKey> keys = new ArrayList<SortKey>();
+            SortKey key = new SortKey(column, order);
+            keys.add(key);
+            rowSorter.setSortKeys(keys);
+        }
     }
 
     /**
