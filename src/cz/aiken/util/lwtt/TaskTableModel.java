@@ -30,6 +30,7 @@ import java.io.*;
 import java.awt.event.*;
 import java.math.*;
 import java.text.*;
+import java.util.regex.*;
 
 /**
  * This class represents the task table model.
@@ -103,8 +104,32 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
      */
     @Override
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+
+        // rowIndex does not need conversion to model index here??
         switch (columnIndex) {
             case 0: tasks.get(rowIndex).setName((String) aValue);
+                break;
+            case 1:
+
+                // Validating input to '<number>:<number>' format
+                aValue = (StringBuffer)aValue;
+                Pattern p = Pattern.compile("(\\p{Digit}++):(\\p{Digit}++)");
+
+                // Consumption column is a StringBuffer so toString() needed
+                Matcher m = p.matcher(aValue.toString());
+                if (!m.matches()) {
+
+                    JOptionPane.showMessageDialog(null, "Please enter a time in '<hours>:<minutes>' format, e.g. ' 1:16'",
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                    break;
+                }
+
+                // Converting from hours + minutes into milliseconds and saving
+                long consumption = Long.parseLong(m.group(1)) * 60 * 60000 + Long.parseLong(m.group(2)) * 60000;
+                tasks.get(rowIndex).setConsumption(consumption);
+
+                // Indicate that the cost cell should be updated
+                fireTableCellUpdated(rowIndex, 2);
                 break;
         }
     }
@@ -145,12 +170,12 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
      * Checks whether the given cell is editable.
      * @param rowIndex row index
      * @param columnIndex column index
-     * @return <CODE>true</CODE> for the first column (index 0),
+     * @return <CODE>true</CODE> for the first two columns,
      * <CODE>false</CODE> otherwise
      */
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
-        return columnIndex == 0;
+        return columnIndex < 2;
     }
 
     public Task getTask(int index) {
@@ -166,7 +191,7 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
         tasks.add(t);
 
         int row = tasks.size()-1;
-       
+
         fireTableRowsInserted(row, row);
     }
 
