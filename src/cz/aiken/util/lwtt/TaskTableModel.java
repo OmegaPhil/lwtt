@@ -353,7 +353,8 @@ public class TaskTableModel extends AbstractTableModel implements ActionListener
                 }
             }
 
-            // TODO: Why doesn't this have an effect normally?
+            /* Basic sort on task ID - will be overriden in the view if the user
+             * has specified a sort column/order */
             Collections.sort(tasks);
 
             fireTableDataChanged();
