@@ -2,6 +2,7 @@
  * TaskFrame.java - implementation of LWTT main application window
  *
  * Copyright (c) 2006, 2007, 2008 Lukas Jelinek, http://www.aiken.cz
+ * Copyright (c) 2014 OmegaPhil, OmegaPhil00@startmail.com
  *
  * ==========================================================================
  *
